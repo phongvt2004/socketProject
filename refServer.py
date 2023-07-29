@@ -29,6 +29,10 @@ while 1:
     print(message)
     # Extract the filename from the given message
     print(message.split()[1])
+    method = message.split()[0]
+    if (method != "GET" and method != "POST" and method != "HEAD"):
+        response = '403'
+        tcpCliSock.send(response.encode('utf-8'))
     filename = message.split()[1].partition("/")[2]
     print(filename)
     fileExist = "false"
