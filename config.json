@@ -1,0 +1,9 @@
+{
+    "cache_time": 900,
+    "whitelisting": [
+        "oosc.online",
+        "example.com",
+        "google.com"
+    ],
+    "time": "12-20"
+}
