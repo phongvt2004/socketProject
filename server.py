@@ -31,6 +31,11 @@ class Server:
             print('Đã nhận:', data)
             response = 'Phản hồi từ server'
             conn.send(response.encode('utf-8'))
+        start_time, end_time = createServer.read_extractjson()
+        if (createServer.check_time(start_time, end_time)):
+            print('ok')
+        else:
+            print('Thời gian truy cập Web Proxy không hợp lệ')
             
     def createThread(self,conn):
         print("createThread")
@@ -71,6 +76,7 @@ class Server:
     def extract_time(self, time_string):
         start_time, end_time = map(int, time_string.split('-'))
         return start_time, end_time
+
     def read_extractjson(self):
         with open("config.json", "r") as infile:
             data_in = json.load(infile)
@@ -80,12 +86,9 @@ class Server:
 
 # Tạo một socket của server
 with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as server:
+    print('Server đang lắng nghe kết nối...')
     createServer = Server(server, HOST, PORT)
-    start_time, end_time = createServer.read_extractjson()
-    if (createServer.check_time(start_time, end_time)) :
-        print('Server đang lắng nghe kết nối...')
-        createServer.run()
-    else:
-        print('Thời gian truy cập Web Proxy không hợp lệ')
+    createServer.run()
+
 
 
