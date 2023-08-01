@@ -76,6 +76,10 @@ class Server:
             data_in = json.load(infile)
         start_time, end_time = self.extract_time(data_in["time"])
         return start_time, end_time
+    
+    def response_html(self):
+        HTMLFile = open("403.html", "r")
+        return HTMLFile.read()
       
 
 # Tạo một socket của server
