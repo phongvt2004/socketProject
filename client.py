@@ -8,7 +8,7 @@ server_address = ('localhost', 8888)
 client_socket.connect(server_address)
 
 # Gửi dữ liệu đến server
-data = 'PUT /www.google.com HTTP/1.0\r\nHost: http://127.0.0.1:8888\r\n\r\n'
+data = 'GET / HTTP/1.0\r\nHost: http://www.google.com\r\n\r\n'
 client_socket.send(data.encode('utf-8'))
 
 # Nhận phản hồi từ server

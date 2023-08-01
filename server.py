@@ -23,19 +23,23 @@ class Server:
         self.ontime = False
         self.whitelist = False
         
-    def handle(conn):
-        print("handle")  
+    def handle(self,conn):
+        print("handle")
+        start_time, end_time = self.read_extractjson()
+        if (self.check_time(start_time, end_time)):
+            print('ok')
+        else:
+            html = self.response_html()
+            response = "HTTP/1.1 200 OK\r\nContent-Type: text/html; charset=UTF-8\r\nContent-Length: " + str(len(html)) + "\r\n\r\n" + str(html)
+            
+            conn.send(response.encode())
+            return
         data = conn.recv(1024).decode('utf-8')
         if data:
             self.data = data
             print('Đã nhận:', data)
             response = 'Phản hồi từ server'
             conn.send(response.encode('utf-8'))
-        start_time, end_time = createServer.read_extractjson()
-        if (createServer.check_time(start_time, end_time)):
-            print('ok')
-        else:
-            print('Thời gian truy cập Web Proxy không hợp lệ')
             
     def createThread(self,conn):
         print("createThread")
@@ -46,7 +50,7 @@ class Server:
                 conn, address = server.accept()
                 print('Đã kết nối từ:', address)
                 print("start thread")
-                self.createThread(conn)
+                self.handle(conn)
             except Exception as e:
                 print(e)
                 break
