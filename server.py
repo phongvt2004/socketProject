@@ -59,7 +59,7 @@ class Server:
     def check_time(self, start_hrs, end_hrs):
         time = datetime.datetime.now()
         current_hour = int(time.strftime("%H"))
-        if (start_hrs <= current_hour and current_hour <= end_hrs) :
+        if (start_hrs < current_hour and current_hour < end_hrs) :
             return True
         else:
             return False
