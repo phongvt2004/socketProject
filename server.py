@@ -20,8 +20,7 @@ class Server:
         self.server = server
         self.cache_exists = False
         self.cache_file = ''
-        self.ontime = False
-        self.whitelist = False
+        self.request_data = ''
         
     def handle(self,conn):
         print("handle")
@@ -30,7 +29,7 @@ class Server:
             print('ok')
         else:
             html = self.response_html()
-            response = "HTTP/1.1 200 OK\r\nContent-Type: text/html; charset=UTF-8\r\nContent-Length: " + str(len(html)) + "\r\n\r\n" + str(html)
+            response = "HTTP/1.1 200 OK\r\nContent-Type: text/html\r\nContent-Length: " + str(len(html)) + "\r\n\r\n" + str(html)
             
             conn.send(response.encode())
             return
@@ -72,8 +71,8 @@ class Server:
 
     def check_method(self):
         print(self.data)
-        method = self.data.split()[0]
-        if (method != "GET" and method != "POST" and method != "HEAD"):
+        self.method = self.data.split()[0]
+        if (self.method != "GET" and self.method != "POST" and self.method != "HEAD"):
             return False
         else: return True
 
@@ -90,6 +89,13 @@ class Server:
     def response_html(self):
         HTMLFile = open("403.html", "r")
         return HTMLFile.read()
+    
+    def request_server(self):
+        hostn = self.url.replace("www.","",1)
+        server_address = (hostn, 80)
+        client_socket.connect(server_address)
+        data = self.method+' / HTTP/1.0\r\nHost: http://'+self.url+'\r\n\r\n'+self.request_data
+        client_socket.send(data.encode('utf-8'))
       
 
 # Tạo một socket của server
