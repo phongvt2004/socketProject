@@ -1,9 +1,7 @@
 import socket
 import json
 import datetime
-from threading import Thread
-
-
+import threading
 
 HOST = '127.0.0.1'
 PORT = 8889
@@ -54,7 +52,9 @@ class Server:
                 return
             
     def createThread(self,conn):
-        print("createThread")
+        thread=threading.Thread(target= Server.handle, args=(self,conn))
+        thread.start()
+        print (f"Số kết nối: {threading.active_count()-1}")
         
     def run(self):
         while True:
@@ -62,7 +62,8 @@ class Server:
                 conn, address = server.accept()
                 print('Đã kết nối từ:', address)
                 print("start thread")
-                self.handle(conn)
+                #self.handle(conn)
+                self.createThread(conn)
             except Exception as e:
                 print(e)
                 break

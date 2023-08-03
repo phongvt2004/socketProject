@@ -14,6 +14,10 @@ client_socket.send(data.encode('utf-8'))
 # Nhận phản hồi từ server
 response = client_socket.recv(2048).decode('utf-8')
 print('Đã nhận phản hồi:\r\n', response)
-
+while True:
+    msg=input()
+    client_socket.send(msg.encode('utf-8'))
+    response = client_socket.recv(1024).decode('utf-8')
+    print('Đã nhận phản hồi:\r\n', response)
 # Đóng kết nối
 client_socket.close()
