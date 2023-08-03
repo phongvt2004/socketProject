@@ -56,6 +56,8 @@ class Server:
         print("cache")
     
     def check_time(self, start_hrs, end_hrs):
+        if (start_hrs == None or end_hrs == None):
+            return False
         time = datetime.datetime.now()
         current_hour = int(time.strftime("%H"))
         if (start_hrs < current_hour and current_hour < end_hrs) :
