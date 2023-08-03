@@ -1,7 +1,7 @@
 import socket
 import json
 import datetime
-from threading import Thread
+import threading
 
 HOST = '127.0.0.1'
 PORT = 8888
@@ -33,15 +33,18 @@ class Server:
             
             conn.send(response.encode())
             return
-        data = conn.recv(1024).decode('utf-8')
-        if data:
-            self.data = data
-            print('Đã nhận:', data)
-            response = 'Phản hồi từ server'
-            conn.send(response.encode('utf-8'))
+        while True:
+            data = conn.recv(1024).decode('utf-8')
+            if data:
+                self.data = data
+                print('Đã nhận:', data)
+                response = 'Phản hồi từ server'
+                conn.send(response.encode('utf-8'))
             
     def createThread(self,conn):
-        print("createThread")
+        thread=threading.Thread(target= Server.handle, args=(self,conn))
+        thread.start()
+        print (f"Số kết nối: {threading.active_count()-1}")
         
     def run(self):
         while True:
@@ -49,7 +52,8 @@ class Server:
                 conn, address = server.accept()
                 print('Đã kết nối từ:', address)
                 print("start thread")
-                self.handle(conn)
+                #self.handle(conn)
+                self.createThread(conn)
             except Exception as e:
                 print(e)
                 break
