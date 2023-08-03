@@ -24,13 +24,12 @@ class Server:
         
     def handle(self,conn):
         print("handle")
-        start_time, end_time = self.read_extractjson()
+        start_time, end_time, name_whitelist = self.read_extractjson()
         if (self.check_time(start_time, end_time)):
             print('ok')
         else:
             html = self.response_html()
             response = "HTTP/1.1 200 OK\r\nContent-Type: text/html\r\nContent-Length: " + str(len(html)) + "\r\n\r\n" + str(html)
-            
             conn.send(response.encode())
             return
         data = conn.recv(1024).decode('utf-8')
@@ -64,10 +63,14 @@ class Server:
         else:
             return False
     
-    def check_whitelist(self):
-       print("whitelist")
-
-
+    def check_whitelist(self, list_name, website_togo):
+        if not list_name:
+            return False
+        for website in list_name:
+            if (website == website_togo):
+                return True
+            else:
+                return False
 
     def check_method(self):
         print(self.data)
@@ -81,10 +84,15 @@ class Server:
         return start_time, end_time
 
     def read_extractjson(self):
-        with open("config.json", "r") as infile:
-            data_in = json.load(infile)
-        start_time, end_time = self.extract_time(data_in["time"])
-        return start_time, end_time
+        try:
+            with open("config.json", "r") as infile:
+                data_in = json.load(infile)
+        except FileNotFoundError or FileExistsError:
+            print('Không thể mở được file config!')
+            return None, None, []
+        start_time, end_time = self.extract_time(data_in.get("time", ""))
+        name_whitelist = data_in.get("whitelisting", [])
+        return start_time, end_time, name_whitelist
     
     def response_html(self):
         HTMLFile = open("403.html", "r")
