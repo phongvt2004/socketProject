@@ -3,8 +3,10 @@ import json
 import datetime
 from threading import Thread
 
+
+
 HOST = '127.0.0.1'
-PORT = 8888
+PORT = 8889
 FILE_CONFIG = ''
 
 data = {
@@ -29,16 +31,27 @@ class Server:
             print('ok')
         else:
             html = self.response_html()
-            response = "HTTP/1.1 200 OK\r\nContent-Type: text/html\r\nContent-Length: " + str(len(html)) + "\r\n\r\n" + str(html)
+            response = "HTTP/1.1 403 Forbidden\r\nContent-Type: text/html\r\nContent-Length: " + str(len(html)) + "\r\n\r\n" + str(html)
             
             conn.send(response.encode())
             return
         data = conn.recv(1024).decode('utf-8')
         if data:
             self.data = data
-            print('Đã nhận:', data)
-            response = 'Phản hồi từ server'
-            conn.send(response.encode('utf-8'))
+            if(self.check_method()):
+                print(data)
+                self.url = data.split()[1].partition("/")[2]
+                self.request_data = data.split('\r\n\r\n')[1]
+                response = self.request_server()
+                # response = '123'
+                conn.send(response.encode('iso-8859-1'))
+                conn.close()
+            else:
+                html = self.response_html()
+                response = "HTTP/1.1 403 Forbidden\r\nContent-Type: text/html\r\nContent-Length: " + str(len(html)) + "\r\n\r\n" + str(html)
+                
+                conn.send(response.encode())
+                return
             
     def createThread(self,conn):
         print("createThread")
@@ -53,6 +66,8 @@ class Server:
             except Exception as e:
                 print(e)
                 break
+            finally:
+                conn.close()
     def cache(self):
         print("cache")
     
@@ -70,7 +85,6 @@ class Server:
 
 
     def check_method(self):
-        print(self.data)
         self.method = self.data.split()[0]
         if (self.method != "GET" and self.method != "POST" and self.method != "HEAD"):
             return False
@@ -92,17 +106,43 @@ class Server:
     
     def request_server(self):
         hostn = self.url.replace("www.","",1)
+        client_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         server_address = (hostn, 80)
         client_socket.connect(server_address)
-        data = self.method+' / HTTP/1.0\r\nHost: http://'+self.url+'\r\n\r\n'+self.request_data
+        data = self.method+' / HTTP/1.1\r\nHost: '+self.url+self.request_data+'\r\nConnection: keep-alive'+'\r\n\r\n'
+        print(data)
         client_socket.send(data.encode('utf-8'))
-      
+        # self.handle_chunked_encoding(client_socket)
+        response = client_socket.recv(4096).decode('iso-8859-1')
+        # response = self.handle_chunk(client_socket, response)
+        print('Đã nhận phản hồi:\r\n', response)
+        return response
+    
+    def handle_chunk(self, client_socket, response):
+        body = response.split('\r\n\r\n')[1]
+        length = body.split('\r\n')[0]
+        length = int(length, base=16)
+        real_receive = body.split('\r\n')[1]
+        real_receive_length = len(real_receive)
+        while True:
+            new_receive = client_socket.recv(1024).decode('iso-8859-1')
+            real_receive_length += len(new_receive)
+            response+=new_receive
+            # print(new_receive)
+            if response.find('\r\n0\r\n\r\n') != -1:
+                response = response.split('\r\n0\r\n\r\n')[0] + '\r\n0\r\n\r\n'
+                break
+        print('Đã nhận phản hồi:\r\n', response)
+        return response
 
 # Tạo một socket của server
-with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as server:
+try:
+    server = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     print('Server đang lắng nghe kết nối...')
     createServer = Server(server, HOST, PORT)
     createServer.run()
+finally:
+    server.close()
 
 
 
