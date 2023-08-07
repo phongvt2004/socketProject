@@ -10,7 +10,7 @@ FILE_CONFIG = ''
 data = {
     "cache_time": 900, #seconds
     "whitelisting": ["oosc.online", "example.com"],
-    "time": "8-20" #range of time
+    "time": "0-24" #range of time
 }
 
 class Server:
@@ -33,13 +33,30 @@ class Server:
             
             conn.send(response.encode())
             return
-        data = conn.recv(1024).decode('utf-8')
+        data = conn.recv(1024).decode('iso-8859-1')
         if data:
-            self.data = data
+            self.request = data
             if(self.check_method()):
                 print(data)
-                self.url = data.split()[1].partition("/")[2]
-                self.request_data = data.split('\r\n\r\n')[1]
+                new_request = data.split('\r\nHost: ')
+                new_request[1] = new_request[1].split('\r\n')
+                self.url = new_request[1][0]
+                new_request[1] = '\r\n'.join(new_request[1])
+                new_request = '\r\nHost: '.join(new_request)
+                new_request = new_request.split('\r\n')
+                print(new_request)
+                for i in range(len(new_request)):
+                    # print(new_request[i].find('Accept-Encoding')+'\r\n')
+                    if(new_request[i].find('Accept-Encoding') != -1):
+                        new_request.pop(i)
+                        break
+                for i in range(len(new_request)):
+                    if(new_request[i].find('User-Agent') != -1):
+                        new_request.pop(i)
+                        break
+                new_request = '\r\n'.join(new_request)
+                self.request = new_request
+                print(self.request)
                 response = self.request_server()
                 # response = '123'
                 conn.send(response.encode('iso-8859-1'))
@@ -62,8 +79,8 @@ class Server:
                 conn, address = server.accept()
                 print('Đã kết nối từ:', address)
                 print("start thread")
-                #self.handle(conn)
-                self.createThread(conn)
+                self.handle(conn)
+                # self.createThread(conn)
             except Exception as e:
                 print(e)
                 break
@@ -77,7 +94,9 @@ class Server:
             return False
         time = datetime.datetime.now()
         current_hour = int(time.strftime("%H"))
-        if (start_hrs < current_hour and current_hour < end_hrs) :
+        print(current_hour)
+        print(start_hrs)
+        if (start_hrs <= current_hour and current_hour < end_hrs) :
             return True
         else:
             return False
@@ -92,7 +111,7 @@ class Server:
                 return False
 
     def check_method(self):
-        self.method = self.data.split()[0]
+        self.method = self.request.split()[0]
         if (self.method != "GET" and self.method != "POST" and self.method != "HEAD"):
             return False
         else: return True
@@ -121,28 +140,46 @@ class Server:
         client_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         server_address = (hostn, 80)
         client_socket.connect(server_address)
-        data = self.method+' / HTTP/1.1\r\nHost: '+self.url+self.request_data+'\r\nConnection: keep-alive'+'\r\n\r\n'
-        print(data)
-        client_socket.send(data.encode('utf-8'))
+        client_socket.send(self.request.encode('iso-8859-1'))
         # self.handle_chunked_encoding(client_socket)
         response = client_socket.recv(4096).decode('iso-8859-1')
-        # response = self.handle_chunk(client_socket, response)
-        print('Đã nhận phản hồi:\r\n', response)
+        if(response.split('\r\n\r\n')[0].find('HTTP/1.1') != -1 and response.split('\r\n\r\n')[1].find('HTTP/1.1') != -1):
+            response = response.split('\r\n\r\n')
+            response.pop(0)
+            response = '\r\n\r\n'.join(response)
+        print(response)
+        if response.find('content-length') != -1:
+            response = self.handle_length(client_socket, response, 'content-length')
+        elif response.find('Content-Length') != -1:
+            response = self.handle_length(client_socket, response,'Content-Length')
+        elif response.find('chunked') != -1:
+            response = self.handle_chunk(client_socket, response)
+        return response
+    
+    def handle_length(self, client_socket, response,query):
+        header = response.split('\r\n\r\n')[0]
+        body = response.split('\r\n\r\n')[1]
+        total_length = (' '.join(header.split('\r\n'))).split(' ')
+        print(total_length)
+        total_length = int(total_length[total_length.index(query+":")+1])
+        length = len(response)-len(header)-4
+        while length < total_length:
+            new_receive = client_socket.recv(1024).decode('iso-8859-1')
+            length += len(new_receive)
+            response+=new_receive
         return response
     
     def handle_chunk(self, client_socket, response):
         body = response.split('\r\n\r\n')[1]
-        length = body.split('\r\n')[0]
-        length = int(length, base=16)
         real_receive = body.split('\r\n')[1]
-        real_receive_length = len(real_receive)
         while True:
             new_receive = client_socket.recv(1024).decode('iso-8859-1')
-            real_receive_length += len(new_receive)
             response+=new_receive
             # print(new_receive)
             if response.find('\r\n0\r\n\r\n') != -1:
-                response = response.split('\r\n0\r\n\r\n')[0] + '\r\n0\r\n\r\n'
+                print(response.split('\r\n0\r\n\r\n'))
+                # if(len(response.split('\r\n0\r\n\r\n')) > 0):
+                #     response = response.split('\r\n0\r\n\r\n')[0] + '\r\n0\r\n\r\n'
                 break
         print('Đã nhận phản hồi:\r\n', response)
         return response
