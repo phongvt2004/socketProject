@@ -2,10 +2,12 @@ import socket
 import json
 import datetime
 import threading
+import os
 
 HOST = '127.0.0.1'
 PORT = 8889
 FILE_CONFIG = ''
+cache_folder='cache'
 
 data = {
     "cache_time": 900, #seconds
@@ -37,14 +39,15 @@ class Server:
         if data:
             self.request = data
             if(self.check_method()):
-                print(data)
+                print(data,'\n')
+                url=self.get_image_url_from_request(data)
                 new_request = data.split('\r\nHost: ')
                 new_request[1] = new_request[1].split('\r\n')
                 self.url = new_request[1][0]
                 new_request[1] = '\r\n'.join(new_request[1])
                 new_request = '\r\nHost: '.join(new_request)
                 new_request = new_request.split('\r\n')
-                print(new_request)
+                print(new_request,'\n')
                 for i in range(len(new_request)):
                     # print(new_request[i].find('Accept-Encoding')+'\r\n')
                     if(new_request[i].find('Accept-Encoding') != -1):
@@ -56,8 +59,11 @@ class Server:
                         break
                 new_request = '\r\n'.join(new_request)
                 self.request = new_request
-                print(self.request)
-                response = self.request_server()
+                print(self.request,'\n')
+                response = self.request_server(url)
+                print(response,'\n')
+                #if url:
+                #    self.save_image_cache(url,response)
                 # response = '123'
                 conn.send(response.encode('iso-8859-1'))
                 conn.close()
@@ -86,9 +92,47 @@ class Server:
                 break
             finally:
                 conn.close()
-    def cache(self):
-        print("cache")
+
+    def get_image_url_from_request(self, request):
+        # Tách các dòng trong yêu cầu
+        lines = request.split("\r\n")
+        # Tìm dòng Accept
+        accept_line = next((line for line in lines if line.startswith("Accept:")), None)
+        # Kiểm tra xem dòng Accept có tồn tại hay không và có chứa giá trị hình ảnh hay không
+        if accept_line and ("image" in accept_line):
+            # Lấy dòng yêu cầu (request line)
+            request_line = lines[0]
+            # Tách các thành phần của dòng yêu cầu
+            method, url, _ = request_line.split(" ")
+            return url
+        return None
     
+    def save_image_cache(self,image_url, data):
+        # Tạo thư mục cache nếu chưa tồn tại
+        # Phân tích URL để lấy tên tệp hình ảnh
+        image_name = image_url.split("/")[-1]
+        # Kiểm tra xem hình ảnh đã tồn tại trong bộ nhớ cache chưa
+        if os.path.exists(os.path.join(cache_folder, image_name)):
+            print("Hình ảnh đã tồn tại trong cache.")
+            return
+        try:
+            # Nhận phản hồi từ máy chủ
+            response = b""
+            response += data
+            # Tách phần thân của phản hồi HTTP
+            headers, body = response.split(b"\r\n\r\n", 1)
+            # Kiểm tra xem phản hồi có mã trạng thái 200 (OK) hay không
+            if b"200 OK" in headers:
+                # Lưu hình ảnh vào bộ nhớ cache
+                with open(os.path.join(cache_folder, image_name), "wb") as file:
+                    file.write(body)
+                print("Hình ảnh đã được lưu vào cache.")
+            else:
+                print("Không thể lưu hình ảnh từ máy chủ.")
+        except Exception as e:
+            print("Lỗi trong quá trình lấy và lưu cache hình ảnh:", str(e))
+            return None  
+        
     def check_time(self, start_hrs, end_hrs):
         if (start_hrs == None or end_hrs == None):
             return False
@@ -135,14 +179,17 @@ class Server:
         HTMLFile = open("403.html", "r")
         return HTMLFile.read()
     
-    def request_server(self):
+    def request_server(self, url):
         hostn = self.url.replace("www.","",1)
         client_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         server_address = (hostn, 80)
         client_socket.connect(server_address)
         client_socket.send(self.request.encode('iso-8859-1'))
         # self.handle_chunked_encoding(client_socket)
-        response = client_socket.recv(4096).decode('iso-8859-1')
+        response = client_socket.recv(40960).decode('iso-8859-1')
+        new_response= response
+        if url:
+            self.save_image_cache(url,new_response.encode('iso-8859-1'))
         if(response.split('\r\n\r\n')[0].find('HTTP/1.1') != -1 and response.split('\r\n\r\n')[1].find('HTTP/1.1') != -1):
             response = response.split('\r\n\r\n')
             response.pop(0)
