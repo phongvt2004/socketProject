@@ -26,7 +26,12 @@ class Server:
         
     def handle(self,conn):
         print("handle")
-        start_time, end_time, name_whitelist = self.read_extractjson()
+        cache_time, start_time, end_time, name_whitelist = self.read_extractjson()
+        #test
+        if (self.check_whitelist(name_whitelist, 'amazon.com')):
+            print ('ok')
+        else:
+            print ('no')
         if (self.check_time(start_time, end_time)):
             print('ok')
         else:
@@ -151,8 +156,7 @@ class Server:
         for website in list_name:
             if (website == website_togo):
                 return True
-            else:
-                return False
+        return False
 
     def check_method(self):
         self.method = self.request.split()[0]
@@ -171,9 +175,10 @@ class Server:
         except FileNotFoundError or FileExistsError:
             print('Không thể mở được file config!')
             return None, None, []
+        cache_time = int (data_in.get("cache_time", 0))
         start_time, end_time = self.extract_time(data_in.get("time", ""))
         name_whitelist = data_in.get("whitelisting", [])
-        return start_time, end_time, name_whitelist
+        return cache_time, start_time, end_time, name_whitelist
     
     def response_html(self):
         HTMLFile = open("403.html", "r")

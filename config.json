@@ -3,7 +3,9 @@
     "whitelisting": [
         "oosc.online",
         "example.com",
-        "google.com"
+        "google.com",
+        "facebook.com",
+        "amazon.com"
     ],
     "time": "0-24"
 }
