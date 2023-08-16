@@ -73,6 +73,7 @@ class Server:
                 new_request = '\r\n'.join(new_request)
                 self.request = new_request
                 print(self.request,'\n')
+                
                 response = self.request_server(url)
                 print(response,'\n')
                 #if url:
