@@ -5,7 +5,7 @@ import threading
 import os
 
 HOST = '127.0.0.1'
-PORT = 8889
+PORT = 8888
 FILE_CONFIG = ''
 cache_folder='cache'
 
@@ -28,10 +28,7 @@ class Server:
         print("handle")
         cache_time, start_time, end_time, name_whitelist = self.read_extractjson()
         #test
-        if (self.check_whitelist(name_whitelist, 'amazon.com')):
-            print ('ok')
-        else:
-            print ('no')
+        check = False
         if (self.check_time(start_time, end_time)):
             print('ok')
         else:
@@ -52,6 +49,17 @@ class Server:
                 new_request[1] = '\r\n'.join(new_request[1])
                 new_request = '\r\nHost: '.join(new_request)
                 new_request = new_request.split('\r\n')
+                if (self.check_whitelist(name_whitelist, self.url)):
+                    print ('ok')
+                else:
+                    html = self.response_html()
+                    response = "HTTP/1.1 403 Forbidden\r\nContent-Type: text/html\r\nContent-Length: " + str(len(html)) + "\r\n\r\n" + str(html)
+                    
+                    conn.send(response.encode())
+                    print('not')
+                    print(response)
+                    return
+                print('ok')
                 print(new_request,'\n')
                 for i in range(len(new_request)):
                     # print(new_request[i].find('Accept-Encoding')+'\r\n')
@@ -154,7 +162,7 @@ class Server:
         if not list_name:
             return False
         for website in list_name:
-            if (website == website_togo):
+            if (website.find(website_togo) != -1):
                 return True
         return False
 
