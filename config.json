@@ -1,5 +1,5 @@
 {
-    "cache_time": 900,
+    "cache_time": 5,
     "whitelisting": [
         "oosc.online",
         "example.com",
