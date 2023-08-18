@@ -1,11 +1,12 @@
 {
-    "cache_time": 900,
+    "cache_time": 5,
     "whitelisting": [
         "oosc.online",
         "example.com",
         "google.com",
         "facebook.com",
-        "amazon.com"
+        "amazon.com",
+        "arduino.vn"
     ],
     "time": "0-24"
 }
