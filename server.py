@@ -5,7 +5,7 @@ import threading
 import os
 
 HOST = '127.0.0.1'
-PORT = 8889
+PORT = 8888
 FILE_CONFIG = ''
 cache_folder='cache'
 
@@ -58,10 +58,8 @@ class Server:
                     
                     conn.send(response.encode())
                     print('not')
-                    print(response)
                     return
                 print('ok')
-                print(new_request,'\n')
                 for i in range(len(new_request)):
                     # print(new_request[i].find('Accept-Encoding')+'\r\n')
                     if(new_request[i].find('Accept-Encoding') != -1):
@@ -73,7 +71,6 @@ class Server:
                         break
                 new_request = '\r\n'.join(new_request)
                 self.request = new_request
-                print(self.request,'\n')
                 image_url=self.get_image_url_from_request(data)
                 print(image_url)
                 if image_url:
@@ -114,6 +111,7 @@ class Server:
 
     def check_image_exist(self, image_url):
         image_name = image_url.split("/")[-1]
+        image_name = image_name.split("?")[0]
         # Kiểm tra xem hình ảnh đã tồn tại trong bộ nhớ cache chưa
         image_web = image_url.split('//')[1].split('/')[0]
         image_web = image_web.split('.')
@@ -139,7 +137,14 @@ class Server:
     
     def save_image_cache(self,image_url, data, cache_time):
         # Tạo thư mục cache nếu chưa tồn tại
+        lines = data.lower()
+        lines = lines.split("\r\n")
+        content_type_line = next((line for line in lines if line.startswith("content-type:")), None)
+        if(content_type_line.find("image") == -1):
+            return 
+        data = data.encode('iso-8859-1')
         image_name = image_url.split("/")[-1]
+        image_name = image_name.split("?")[0]
         image_web = image_url.split('//')[1].split('/')[0]
         image_web = image_web.split('.')
         image_web = '_'.join(image_web)
@@ -158,7 +163,8 @@ class Server:
                 with open(os.path.join(cache_folder,image_web, image_name), "wb") as file:
                     file.write(body)
                 print("Hình ảnh đã được lưu vào cache.")
-                self.image_time[image_web+image_name]=datetime.datetime.now()+datetime.timedelta(minutes=cache_time)
+                
+                self.image_time[os.path.join(cache_folder,image_web, image_name)]=datetime.timedelta(seconds=cache_time*60)
             else:
                 print("Không thể lưu hình ảnh từ máy chủ.")
         except Exception as e:
@@ -180,18 +186,19 @@ class Server:
         response += "\r\n" + str(image_data.decode("iso-8859-1"))
         return response
     
-    def delete_image(self, image_name):
-        image_path=os.path.join(cache_folder,image_name)
+    def delete_image(self, image_path):
         if os.path.exists(image_path):
             os.remove(image_path)
 
     def check_image_time(self, dict):
         images_to_delete = [] 
-        for image_name,timestamp in dict.items():
+        for image_path,timestamp in dict.items():
             time=datetime.datetime.now()
-            if time >= timestamp:
-                self.delete_image(image_name)
-                images_to_delete.append(image_name)
+            image_time = datetime.datetime.fromtimestamp(os.path.getmtime(image_path))
+            if time - image_time >= timestamp:
+                print("True")
+                self.delete_image(image_path)
+                images_to_delete.append(image_path)
         for image in images_to_delete:
             del dict[image]
     
@@ -261,7 +268,7 @@ class Server:
         elif response.find('chunked') != -1:
             response = self.handle_chunk(client_socket, response)
         if url:
-            self.save_image_cache(url,response.encode('iso-8859-1'), cache_time)
+            self.save_image_cache(url,response, cache_time)
         return response
     
     def handle_length(self, client_socket, response,query):
@@ -285,7 +292,6 @@ class Server:
             response+=new_receive
             # print(new_receive)
             if response.find('\r\n0\r\n\r\n') != -1:
-                print(response.split('\r\n0\r\n\r\n'))
                 # if(len(response.split('\r\n0\r\n\r\n')) > 0):
                 #     response = response.split('\r\n0\r\n\r\n')[0] + '\r\n0\r\n\r\n'
                 break
