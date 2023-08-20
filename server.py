@@ -5,7 +5,7 @@ import threading
 import os
 
 HOST = '127.0.0.1'
-PORT = 8888
+PORT = 8889
 FILE_CONFIG = ''
 cache_folder='cache'
 
@@ -80,8 +80,8 @@ class Server:
                         response = self.request_server(image_url, cache_time)
                 else:
                     response = self.request_server(image_url, cache_time)
+                print(response)
                 conn.send(response.encode('iso-8859-1'))
-                conn.close()
             else:
                 html = self.response_html()
                 response = "HTTP/1.1 403 Forbidden\r\nContent-Type: text/html\r\nContent-Length: " + str(len(html)) + "\r\n\r\n" + str(html)
@@ -217,8 +217,10 @@ class Server:
     def check_whitelist(self, list_name, website_togo):
         if not list_name:
             return False
+        website_togo = website_togo.split(".")[-2] + "."+website_togo.split(".")[-1]
+        print(website_togo)
         for website in list_name:
-            if (website_togo.find(website) != -1):
+            if (website_togo == website):
                 return True
         return False
 
@@ -250,17 +252,18 @@ class Server:
     
     def request_server(self, url, cache_time):
         hostn = self.url.replace("www.","",1)
+        hostn = self.url.split(".")[-2] + "."+self.url.split(".")[-1]
         client_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         server_address = (hostn, 80)
         client_socket.connect(server_address)
         client_socket.send(self.request.encode('iso-8859-1'))
         # self.handle_chunked_encoding(client_socket)
         response = client_socket.recv(4096).decode('iso-8859-1')
-        new_response= response
-        if(response.split('\r\n\r\n')[0].find('HTTP/1.1') != -1 and response.split('\r\n\r\n')[1].find('HTTP/1.1') != -1):
-            response = response.split('\r\n\r\n')
-            response.pop(0)
-            response = '\r\n\r\n'.join(response)
+        # if(response.split('\r\n\r\n')[0].find('HTTP/1.1') != -1 and response.split('\r\n\r\n')[1].find('HTTP/1.1') != -1):
+        #     response = response.split('\r\n\r\n')
+        #     response.pop(0)
+        #     response = '\r\n\r\n'.join(response)
+        print(response)
         if response.find('content-length') != -1:
             response = self.handle_length(client_socket, response, 'content-length')
         elif response.find('Content-Length') != -1:
@@ -285,16 +288,14 @@ class Server:
         return response
     
     def handle_chunk(self, client_socket, response):
-        body = response.split('\r\n\r\n')[1]
-        real_receive = body.split('\r\n')[1]
         while True:
+            if response.find('\r\n0\r\n\r\n') != -1:
+                if(len(response.split('\r\n0\r\n\r\n')) > 0):
+                    response = response.split('\r\n0\r\n\r\n')[0] + '\r\n0\r\n\r\n'
+                break
             new_receive = client_socket.recv(1024).decode('iso-8859-1')
             response+=new_receive
             # print(new_receive)
-            if response.find('\r\n0\r\n\r\n') != -1:
-                # if(len(response.split('\r\n0\r\n\r\n')) > 0):
-                #     response = response.split('\r\n0\r\n\r\n')[0] + '\r\n0\r\n\r\n'
-                break
         print('Đã nhận phản hồi:\r\n', response)
         return response
 
